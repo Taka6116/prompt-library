@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Copy, Check, Pencil, Trash2, X } from "lucide-react";
+import { Copy, Check, Pencil, Trash2, ExternalLink } from "lucide-react";
 import type { CategoryId, PromptItem } from "@/data/types";
 import EditPromptModal from "./EditPromptModal";
 
@@ -63,7 +63,8 @@ export default function PromptCard({
 
   const handleCopy = useCallback(async () => {
     try {
-      await navigator.clipboard.writeText(localPrompt);
+      const textToCopy = categoryId === "article" && item.url ? item.url : localPrompt;
+      await navigator.clipboard.writeText(textToCopy);
       setCopied(true);
       setTimeout(() => setCopied(false), COPIED_DURATION_MS);
     } catch {
@@ -100,7 +101,7 @@ export default function PromptCard({
               type="button"
               onClick={handleCopy}
               className="inline-flex items-center gap-1.5 rounded-lg border border-accent/20 bg-accent/10 px-2.5 py-1.5 text-xs font-medium text-accent transition-all hover:scale-105 hover:bg-accent hover:text-white focus-visible:outline-none"
-              aria-label="プロンプトをコピー"
+              aria-label={categoryId === "article" ? "URLをコピー" : "プロンプトをコピー"}
             >
               {copied ? (
                 <>
@@ -142,19 +143,51 @@ export default function PromptCard({
           </p>
         )}
 
-        <div className="relative mb-5 flex-1 group/prompt">
-          <textarea
-            ref={textareaRef}
-            value={localPrompt}
-            onChange={handlePromptChange}
-            onBlur={handlePromptBlur}
-            className="block w-full resize-y rounded-lg bg-code border border-border/50 p-4 font-mono text-sm text-[#4F5968] transition-all duration-300 hover:border-accent/30 hover:bg-surfaceHover focus:bg-surface focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none min-h-[90px] max-h-[400px]"
-            aria-label="プロンプト本文"
-            rows={3}
-          />
-        </div>
+        {categoryId === "article" && item.url ? (
+          <a
+            href={item.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group/link block mb-5 overflow-hidden rounded-lg border border-border/80 bg-surface transition-all hover:border-accent/40 hover:shadow-md"
+          >
+            {item.imageUrl && (
+              <div className="w-full h-40 bg-surfaceHover overflow-hidden border-b border-border/50">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={item.imageUrl}
+                  alt={item.title}
+                  className="w-full h-full object-cover transition-transform duration-500 group-hover/link:scale-105"
+                />
+              </div>
+            )}
+            <div className="p-4 relative">
+              <ExternalLink className="absolute top-4 right-4 h-4 w-4 text-textSub opacity-0 transition-all group-hover/link:opacity-100 group-hover/link:text-accent" />
+              <p className="text-sm font-medium text-textMain line-clamp-1 mb-1 group-hover/link:text-accent transition-colors pr-6">
+                {item.title}
+              </p>
+              <p className="text-xs text-textSub line-clamp-2 mb-2">
+                {item.description}
+              </p>
+              <p className="text-xs font-mono text-textSub/70 truncate">
+                {item.url}
+              </p>
+            </div>
+          </a>
+        ) : (
+          <div className="relative mb-5 flex-1 group/prompt">
+            <textarea
+              ref={textareaRef}
+              value={localPrompt}
+              onChange={handlePromptChange}
+              onBlur={handlePromptBlur}
+              className="block w-full resize-y rounded-lg bg-code border border-border/50 p-4 font-mono text-sm text-[#4F5968] transition-all duration-300 hover:border-accent/30 hover:bg-surfaceHover focus:bg-surface focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none min-h-[90px] max-h-[400px]"
+              aria-label="プロンプト本文"
+              rows={3}
+            />
+          </div>
+        )}
 
-        {(item.expectedOutput || item.imageUrl) && (
+        {categoryId !== "article" && (item.expectedOutput || item.imageUrl) && (
           <div className="mt-auto border-l-2 border-accent/40 bg-accent/5 pl-4 py-3 pr-3 rounded-r-lg">
             {item.expectedOutput && (
               <p className="text-sm text-textSub leading-relaxed mb-3 last:mb-0">

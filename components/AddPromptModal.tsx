@@ -26,6 +26,22 @@ export default function AddPromptModal({
   const [prompt, setPrompt] = useState("");
   const [expectedOutput, setExpectedOutput] = useState("");
   const [imageUrl, setImageUrl] = useState<string | undefined>(undefined);
+  const [url, setUrl] = useState("");
+
+  const handleUrlBlur = async () => {
+    if (!url.trim() || category !== "article") return;
+    try {
+      const res = await fetch(`/api/ogp?url=${encodeURIComponent(url.trim())}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.title && !title) setTitle(data.title);
+        if (data.description && !description) setDescription(data.description);
+        if (data.image && !imageUrl) setImageUrl(data.image);
+      }
+    } catch (error) {
+      console.error("Failed to fetch OGP data", error);
+    }
+  };
 
   const handlePaste = useCallback((e: React.ClipboardEvent) => {
     const items = e.clipboardData?.items;
@@ -57,19 +73,21 @@ export default function AddPromptModal({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || !prompt.trim()) return;
+    if (!title.trim() || (!prompt.trim() && category !== "article") || (category === "article" && !url.trim())) return;
     onAdd(category, {
       title: title.trim(),
       description: description.trim(),
-      prompt: prompt.trim(),
+      prompt: prompt.trim() || url.trim(), // 記事の場合はURLをプロンプト代わりにセットしても良いが、明確に分ける
       expectedOutput: expectedOutput.trim(),
       imageUrl,
+      url: category === "article" ? url.trim() : undefined,
     });
     setTitle("");
     setDescription("");
     setPrompt("");
     setExpectedOutput("");
     setImageUrl(undefined);
+    setUrl("");
     setCategory(initialCategory);
     onClose();
   };
@@ -128,7 +146,7 @@ export default function AddPromptModal({
 
               <div>
                 <label htmlFor="add-title" className="mb-1.5 block text-sm font-medium text-textSub">
-                  {category === "output_example" ? "アウトプットのタイトル" : "プロンプトの目的（タイトル）"} <span className="text-accent">*</span>
+                  {category === "article" ? "記事のタイトル" : category === "output_example" ? "アウトプットのタイトル" : "プロンプトの目的（タイトル）"} <span className="text-accent">*</span>
                 </label>
                 <input
                   id="add-title"
@@ -155,20 +173,43 @@ export default function AddPromptModal({
                 />
               </div>
 
-              <div>
-                <label htmlFor="add-prompt" className="mb-1.5 block text-sm font-medium text-textSub">
-                  {category === "output_example" ? "アウトプット本文" : "プロンプト本文"} <span className="text-accent">*</span>
-                </label>
-                <textarea
-                  id="add-prompt"
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                  placeholder={category === "output_example" ? "アウトプットの例を入力" : "AIに渡すプロンプトを入力"}
-                  rows={5}
-                  className="w-full resize-y rounded-lg border border-border bg-code font-mono text-sm text-textMain placeholder-textSub/40 transition-colors focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
-                  required
-                />
-              </div>
+              {category === "article" && (
+                <div>
+                  <label htmlFor="add-url" className="mb-1.5 block text-sm font-medium text-textSub">
+                    記事のURL <span className="text-accent">*</span>
+                  </label>
+                  <input
+                    id="add-url"
+                    type="url"
+                    value={url}
+                    onChange={(e) => setUrl(e.target.value)}
+                    onBlur={handleUrlBlur}
+                    placeholder="https://example.com/article"
+                    className="w-full rounded-lg border border-border bg-surfaceHover px-3.5 py-2.5 text-sm text-textMain placeholder-textSub/50 transition-colors focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
+                    required={category === "article"}
+                  />
+                  <p className="mt-1.5 text-xs text-textSub">
+                    URLを入力してフォーカスを外すと、タイトルやサムネイル画像を自動取得します。
+                  </p>
+                </div>
+              )}
+
+              {category !== "article" && (
+                <div>
+                  <label htmlFor="add-prompt" className="mb-1.5 block text-sm font-medium text-textSub">
+                    {category === "output_example" ? "アウトプット本文" : "プロンプト本文"} <span className="text-accent">*</span>
+                  </label>
+                  <textarea
+                    id="add-prompt"
+                    value={prompt}
+                    onChange={(e) => setPrompt(e.target.value)}
+                    placeholder={category === "output_example" ? "アウトプットの例を入力" : "AIに渡すプロンプトを入力"}
+                    rows={5}
+                    className="w-full resize-y rounded-lg border border-border bg-code font-mono text-sm text-textMain placeholder-textSub/40 transition-colors focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
+                    required={category !== "article"}
+                  />
+                </div>
+              )}
 
               <div>
                 <label htmlFor="add-expected" className="mb-1.5 block text-sm font-medium text-textSub">

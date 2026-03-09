@@ -7,6 +7,7 @@ export interface PromptItem {
   prompt: string;
   expectedOutput: string;
   imageUrl?: string;
+  url?: string;
   isUserAdded?: boolean;
 }
 
@@ -24,6 +25,7 @@ export const DEFAULT_CATEGORIES: Category[] = [
   { id: "problem", label: "問題解決・壁打ち" },
   { id: "programming", label: "プログラミング" },
   { id: "output_example", label: "アウトプット例" },
+  { id: "article", label: "記事" },
 ];
 
 export const CATEGORY_IDS: CategoryId[] = DEFAULT_CATEGORIES.map(c => c.id);

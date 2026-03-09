@@ -157,6 +157,7 @@ export default function Home() {
         prompt: updates.prompt ?? "",
         expectedOutput: updates.expectedOutput ?? "",
         imageUrl: updates.imageUrl,
+        url: updates.url,
         isUserAdded: true,
       };
       next[cat] = [newItem, ...(next[cat] || [])];

@@ -25,6 +25,22 @@ export default function EditPromptModal({
   const [prompt, setPrompt] = useState(item.prompt);
   const [expectedOutput, setExpectedOutput] = useState(item.expectedOutput);
   const [imageUrl, setImageUrl] = useState(item.imageUrl);
+  const [url, setUrl] = useState(item.url || "");
+
+  const handleUrlBlur = async () => {
+    if (!url.trim() || categoryId !== "article") return;
+    try {
+      const res = await fetch(`/api/ogp?url=${encodeURIComponent(url.trim())}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.title && !title) setTitle(data.title);
+        if (data.description && !description) setDescription(data.description);
+        if (data.image && !imageUrl) setImageUrl(data.image);
+      }
+    } catch (error) {
+      console.error("Failed to fetch OGP data", error);
+    }
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -33,8 +49,9 @@ export default function EditPromptModal({
       setPrompt(item.prompt);
       setExpectedOutput(item.expectedOutput);
       setImageUrl(item.imageUrl);
+      setUrl(item.url || "");
     }
-  }, [isOpen, item.title, item.description, item.prompt, item.expectedOutput, item.imageUrl]);
+  }, [isOpen, item.title, item.description, item.prompt, item.expectedOutput, item.imageUrl, item.url]);
 
   const handlePaste = useCallback((e: React.ClipboardEvent) => {
     const items = e.clipboardData?.items;
@@ -66,13 +83,14 @@ export default function EditPromptModal({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || !prompt.trim()) return;
+    if (!title.trim() || (!prompt.trim() && categoryId !== "article") || (categoryId === "article" && !url.trim())) return;
     onSubmit({
       title: title.trim(),
       description: description.trim(),
-      prompt: prompt.trim(),
+      prompt: prompt.trim() || url.trim(),
       expectedOutput: expectedOutput.trim(),
       imageUrl,
+      url: categoryId === "article" ? url.trim() : undefined,
     });
     onClose();
   };
@@ -113,7 +131,7 @@ export default function EditPromptModal({
             <form onSubmit={handleSubmit} className="space-y-5 px-6 py-5 max-h-[80vh] overflow-y-auto" onPaste={handlePaste}>
               <div>
                 <label htmlFor="edit-title" className="mb-1.5 block text-sm font-medium text-textSub">
-                  {categoryId === "output_example" ? "アウトプットのタイトル" : "プロンプトの目的（タイトル）"} <span className="text-accent">*</span>
+                  {categoryId === "article" ? "記事のタイトル" : categoryId === "output_example" ? "アウトプットのタイトル" : "プロンプトの目的（タイトル）"} <span className="text-accent">*</span>
                 </label>
                 <input
                   id="edit-title"
@@ -138,19 +156,41 @@ export default function EditPromptModal({
                 />
               </div>
 
-              <div>
-                <label htmlFor="edit-prompt" className="mb-1.5 block text-sm font-medium text-textSub">
-                  {categoryId === "output_example" ? "アウトプット本文" : "プロンプト本文"} <span className="text-accent">*</span>
-                </label>
-                <textarea
-                  id="edit-prompt"
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                  rows={5}
-                  className="w-full resize-y rounded-lg border border-border bg-code font-mono text-sm text-textMain transition-colors focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
-                  required
-                />
-              </div>
+              {categoryId === "article" && (
+                <div>
+                  <label htmlFor="edit-url" className="mb-1.5 block text-sm font-medium text-textSub">
+                    記事のURL <span className="text-accent">*</span>
+                  </label>
+                  <input
+                    id="edit-url"
+                    type="url"
+                    value={url}
+                    onChange={(e) => setUrl(e.target.value)}
+                    onBlur={handleUrlBlur}
+                    className="w-full rounded-lg border border-border bg-surfaceHover px-3.5 py-2.5 text-sm text-textMain transition-colors focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
+                    required={categoryId === "article"}
+                  />
+                  <p className="mt-1.5 text-xs text-textSub">
+                    URLを入力してフォーカスを外すと、タイトルやサムネイル画像を自動取得します。
+                  </p>
+                </div>
+              )}
+
+              {categoryId !== "article" && (
+                <div>
+                  <label htmlFor="edit-prompt" className="mb-1.5 block text-sm font-medium text-textSub">
+                    {categoryId === "output_example" ? "アウトプット本文" : "プロンプト本文"} <span className="text-accent">*</span>
+                  </label>
+                  <textarea
+                    id="edit-prompt"
+                    value={prompt}
+                    onChange={(e) => setPrompt(e.target.value)}
+                    rows={5}
+                    className="w-full resize-y rounded-lg border border-border bg-code font-mono text-sm text-textMain transition-colors focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
+                    required={categoryId !== "article"}
+                  />
+                </div>
+              )}
 
               <div>
                 <label htmlFor="edit-expected" className="mb-1.5 block text-sm font-medium text-textSub">
