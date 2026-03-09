@@ -72,7 +72,7 @@ export default function PromptCard({
       setCopied(true);
       setTimeout(() => setCopied(false), COPIED_DURATION_MS);
     }
-  }, [item.prompt]);
+  }, [categoryId, item.url, localPrompt]);
 
   const handleEditSubmit = useCallback(
     (updates: Partial<PromptItem>) => {

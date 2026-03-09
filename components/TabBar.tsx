@@ -29,7 +29,6 @@ export default function TabBar({ categories, activeCategory, onCategoryChange, o
                 className={`relative shrink-0 rounded-lg px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none ${
                   isActive ? "text-accent" : "text-textSub hover:text-textMain hover:bg-surfaceHover/50"
                 }`}
-                aria-selected={isActive}
                 aria-current={isActive ? "page" : undefined}
               >
                 {isActive && (
