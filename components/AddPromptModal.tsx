@@ -27,11 +27,13 @@ export default function AddPromptModal({
   const [expectedOutput, setExpectedOutput] = useState("");
   const [imageUrl, setImageUrl] = useState<string | undefined>(undefined);
   const [url, setUrl] = useState("");
+  const [ogpLoading, setOgpLoading] = useState(false);
 
-  const handleUrlBlur = async () => {
-    if (!url.trim() || category !== "article") return;
+  const fetchOgpForUrl = useCallback(async (targetUrl: string) => {
+    if (!targetUrl.trim() || category !== "article") return;
+    setOgpLoading(true);
     try {
-      const res = await fetch(`/api/ogp?url=${encodeURIComponent(url.trim())}`);
+      const res = await fetch(`/api/ogp?url=${encodeURIComponent(targetUrl.trim())}`);
       if (res.ok) {
         const data = await res.json();
         if (data.title && !title) setTitle(data.title);
@@ -40,8 +42,25 @@ export default function AddPromptModal({
       }
     } catch (error) {
       console.error("Failed to fetch OGP data", error);
+    } finally {
+      setOgpLoading(false);
     }
+  }, [category, title, description, imageUrl]);
+
+  const handleUrlBlur = () => {
+    if (url.trim()) fetchOgpForUrl(url.trim());
   };
+
+  const handleUrlPaste = useCallback((e: React.ClipboardEvent<HTMLInputElement>) => {
+    const text = e.clipboardData?.getData("text")?.trim();
+    if (!text || category !== "article") return;
+    const looksLikeUrl = /^https?:\/\/\S+/.test(text);
+    if (looksLikeUrl) {
+      e.preventDefault();
+      setUrl(text);
+      fetchOgpForUrl(text);
+    }
+  }, [category, fetchOgpForUrl]);
 
   const handlePaste = useCallback((e: React.ClipboardEvent) => {
     const items = e.clipboardData?.items;
@@ -113,7 +132,7 @@ export default function AddPromptModal({
           >
             <div className="flex items-center justify-between border-b border-border/60 bg-background/30 px-6 py-4">
               <h2 className="font-sans text-lg font-semibold text-textMain tracking-tight">
-                {category === "output_example" ? "アウトプット例を追加" : "プロンプトを追加"}
+                {category === "output_example" ? "アウトプット例を追加" : category === "article" ? "記事を追加" : "プロンプトを追加"}
               </h2>
               <button
                 type="button"
@@ -184,13 +203,17 @@ export default function AddPromptModal({
                     value={url}
                     onChange={(e) => setUrl(e.target.value)}
                     onBlur={handleUrlBlur}
+                    onPaste={handleUrlPaste}
                     placeholder="https://example.com/article"
                     className="w-full rounded-lg border border-border bg-surfaceHover px-3.5 py-2.5 text-sm text-textMain placeholder-textSub/50 transition-colors focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
                     required={category === "article"}
                   />
                   <p className="mt-1.5 text-xs text-textSub">
-                    URLを入力してフォーカスを外すと、タイトルやサムネイル画像を自動取得します。
+                    URLを貼り付けるか入力してフォーカスを外すと、タイトル・説明・サムネイル画像を自動で取得し、上にプレビュー表示されます。
                   </p>
+                  {ogpLoading && (
+                    <p className="mt-1 text-xs text-accent">OGPを取得中…</p>
+                  )}
                 </div>
               )}
 
@@ -246,7 +269,7 @@ export default function AddPromptModal({
                     <div className="flex flex-col items-center justify-center text-center">
                       <ImageIcon className="mb-2 h-6 w-6 text-textSub/60" />
                       <p className="mb-1 text-sm font-medium text-textSub">
-                        アウトプット例の画像（任意）
+                        {category === "article" ? "記事のサムネイル（URL貼り付けで自動表示）" : "アウトプット例の画像（任意）"}
                       </p>
                       <p className="text-xs text-textSub/70">
                         クリップボードからペースト（Ctrl+V）するか、
@@ -276,7 +299,7 @@ export default function AddPromptModal({
                 <button
                   type="submit"
                   className="rounded-lg bg-accent px-5 py-2 text-sm font-semibold text-white transition-all hover:bg-accent/90 hover:scale-[1.02] focus-visible:outline-none disabled:opacity-50 disabled:hover:scale-100"
-                  disabled={!title.trim() || !prompt.trim()}
+                  disabled={category === "article" ? (!title.trim() || !url.trim()) : (!title.trim() || !prompt.trim())}
                 >
                   保存する
                 </button>

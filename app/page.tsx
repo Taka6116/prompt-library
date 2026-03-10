@@ -214,7 +214,7 @@ export default function Home() {
             className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-white transition-all hover:bg-accent/90 hover:scale-[1.02] hover:shadow-lg hover:shadow-accent/20 focus-visible:outline-none shrink-0"
           >
             <Plus className="h-4 w-4" />
-            {activeCategory === "output_example" ? "アウトプット追加" : "プロンプトを追加"}
+            {activeCategory === "output_example" ? "アウトプット追加" : activeCategory === "article" ? "記事を追加" : "プロンプトを追加"}
           </button>
         </div>
 
@@ -233,11 +233,13 @@ export default function Home() {
                 <Plus className="h-6 w-6 text-textSub" />
               </div>
               <p className="text-textMain font-medium mb-1">
-                {activeCategory === "output_example" ? "アウトプットがありません" : "プロンプトがありません"}
+                {activeCategory === "output_example" ? "アウトプットがありません" : activeCategory === "article" ? "記事がありません" : "プロンプトがありません"}
               </p>
               <p className="text-sm text-textSub mb-6 max-w-sm">
                 {activeCategory === "output_example"
                   ? "まだこのカテゴリにはアウトプット例が追加されていません。新しいアウトプット例を追加して、チームで共有しましょう。"
+                  : activeCategory === "article"
+                  ? "まだこのカテゴリには記事が追加されていません。URLを追加して、記事をストックしましょう。"
                   : "まだこのカテゴリにはプロンプトが追加されていません。新しいプロンプトを作成して、作業を効率化しましょう。"}
               </p>
               <button
@@ -245,7 +247,7 @@ export default function Home() {
                 onClick={() => setAddModalOpen(true)}
                 className="rounded-lg bg-surfaceHover border border-border px-5 py-2.5 text-sm font-medium text-textMain transition-all hover:bg-border focus-visible:outline-none"
               >
-                {activeCategory === "output_example" ? "アウトプットを追加する" : "プロンプトを追加する"}
+                {activeCategory === "output_example" ? "アウトプットを追加する" : activeCategory === "article" ? "記事を追加する" : "プロンプトを追加する"}
               </button>
             </div>
           ) : (
