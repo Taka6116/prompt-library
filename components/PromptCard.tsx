@@ -42,6 +42,10 @@ export default function PromptCard({
   }, [localPrompt]);
 
   const handleTitleBlur = () => {
+    if (!item.isUserAdded) {
+      setLocalTitle(item.title);
+      return;
+    }
     if (localTitle.trim() && localTitle.trim() !== item.title) {
       onEdit(item.id, { title: localTitle.trim() }, categoryId);
     } else {
@@ -54,6 +58,10 @@ export default function PromptCard({
   };
 
   const handlePromptBlur = () => {
+    if (!item.isUserAdded) {
+      setLocalPrompt(item.prompt);
+      return;
+    }
     if (localPrompt.trim() && localPrompt.trim() !== item.prompt) {
       onEdit(item.id, { prompt: localPrompt.trim() }, categoryId);
     } else {
