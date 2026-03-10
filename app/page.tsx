@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import Header from "@/components/Header";
 import TabBar from "@/components/TabBar";
 import PromptCard from "@/components/PromptCard";
@@ -16,12 +16,31 @@ const STORAGE_KEY_PROMPTS = "prompt-collection-user-prompts";
 const STORAGE_KEY_CATEGORIES = "prompt-collection-categories";
 const STORAGE_KEY_AUTH = "prompt-collection-auth";
 
+function isValidPromptItem(x: unknown): x is PromptItem {
+  return (
+    typeof x === "object" &&
+    x !== null &&
+    "id" in x &&
+    typeof (x as PromptItem).id === "string" &&
+    "title" in x &&
+    typeof (x as PromptItem).title === "string"
+  );
+}
+
 function loadUserPrompts(): Record<CategoryId, PromptItem[]> {
   if (typeof window === "undefined") return {};
   try {
     const raw = localStorage.getItem(STORAGE_KEY_PROMPTS);
     if (!raw) return {};
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    if (typeof parsed !== "object" || parsed === null) return {};
+    const result: Record<string, PromptItem[]> = {};
+    for (const [key, value] of Object.entries(parsed)) {
+      if (Array.isArray(value)) {
+        result[key] = value.filter(isValidPromptItem) as PromptItem[];
+      }
+    }
+    return result as Record<CategoryId, PromptItem[]>;
   } catch {
     return {};
   }
@@ -61,7 +80,8 @@ export default function Home() {
   const [activeCategory, setActiveCategory] = useState<CategoryId>("analysis");
   const [defaultItems] = useState<Record<CategoryId, PromptItem[]>>(buildDefaultItems);
   const [userItems, setUserItems] = useState<Record<CategoryId, PromptItem[]>>({});
-  
+  const userItemsRef = useRef<Record<CategoryId, PromptItem[]>>({});
+
   const [customCategories, setCustomCategories] = useState<Category[]>([]);
   
   const [addModalOpen, setAddModalOpen] = useState(false);
@@ -79,9 +99,38 @@ export default function Home() {
 
   useEffect(() => {
     if (!mounted) return;
-    setUserItems(loadUserPrompts());
+    const loaded = loadUserPrompts();
+    setUserItems(loaded);
+    userItemsRef.current = loaded;
     setCustomCategories(loadCustomCategories());
     setIsAuthenticated(localStorage.getItem(STORAGE_KEY_AUTH) === "true");
+  }, [mounted]);
+
+  useEffect(() => {
+    userItemsRef.current = userItems;
+  }, [userItems]);
+
+  useEffect(() => {
+    if (!mounted) return;
+    const saveOnUnload = () => {
+      try {
+        const current = userItemsRef.current;
+        if (typeof window !== "undefined" && Object.keys(current).length >= 0) {
+          localStorage.setItem(STORAGE_KEY_PROMPTS, JSON.stringify(current));
+        }
+      } catch {
+        // ignore
+      }
+    };
+    window.addEventListener("beforeunload", saveOnUnload);
+    const visibilityHandler = () => {
+      if (document.visibilityState === "hidden") saveOnUnload();
+    };
+    document.addEventListener("visibilitychange", visibilityHandler);
+    return () => {
+      window.removeEventListener("beforeunload", saveOnUnload);
+      document.removeEventListener("visibilitychange", visibilityHandler);
+    };
   }, [mounted]);
 
   const handleLoginSuccess = useCallback(() => {
